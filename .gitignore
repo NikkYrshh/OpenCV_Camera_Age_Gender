@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Virtual environments
+env/
+venv/
+ENV/
+.venv/
+env.bak/
+venv.bak/
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+
