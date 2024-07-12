@@ -28,19 +28,41 @@ def predict_age_gender(img, model):
     preds = model.predict(image_pp)
     age = preds[0][0][0]
     gender_prob = preds[1][0][0]
-    gender = 'Male' if gender_prob <0.5 else 'Female'
+    gender = 'Male' if gender_prob < 0.5 else 'Female'
 
     return age, gender
 
-img_path = 'test_image.jpg'
 
-img = plt.imread(img_path)
+# # Initialise face classifier
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-# plt.imshow(img)
-# plt.show()
-
+# Initiate the NN model
 model_path = 'age_gender_A.h5'
 model = preload_model(model_path)
-age, gender = predict_age_gender(img, model)
-print(age, " ", gender)
+
+camera = cv2.VideoCapture(0)
+if not camera.isOpened():
+    print("Error: Could not open camera.")
+while True:
+    ret, frame = camera.read()
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+    for (x, y, w, h) in faces:
+        face_roi = frame[y:y + h, x:x + w]  # Face region extraction
+        age, gender = predict_age_gender(face_roi, model)  # Model prediction
+
+        # Bounding Box
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+        # Display age and gender
+        label = f"{gender}, {int(age)}"
+        cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0), 2)
+
+    cv2.imshow('Webcam Age Gender Prediction', frame)
+
+    # Exit the webcam window when 'q' key is pressed
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+camera.release()
+cv2.destroyAllWindows()
 
