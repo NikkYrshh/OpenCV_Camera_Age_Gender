@@ -43,20 +43,38 @@ model = preload_model(model_path)
 camera = cv2.VideoCapture(0)
 if not camera.isOpened():
     print("Error: Could not open camera.")
+
+frame_skip = 5  # Process every n-th frame
+frame_count = 0
+
 while True:
     ret, frame = camera.read()
+
+    frame_count += 1
+    if frame_count % frame_skip != 0:
+        continue
+
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
     for (x, y, w, h) in faces:
-        face_roi = frame[y:y + h, x:x + w]  # Face region extraction
+        # Extend bbox to capture the whole face
+        x_ext = max(0, x - int(0.125 * w))
+        y_ext = max(0, y - int(0.125 * h))
+        w_ext = min(frame.shape[1], x + w + int(0.25 * w)) - x_ext
+        h_ext = min(frame.shape[0], y + h + int(0.25 * h)) - y_ext
+
+        face_roi = frame[y_ext:y_ext + h_ext, x_ext:x_ext + w_ext]  # Face region extraction
         age, gender = predict_age_gender(face_roi, model)  # Model prediction
 
-        # Bounding Box
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+        # Bbox
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 3)
+        # Bbox whole face
+        cv2.rectangle(frame, (x_ext, y_ext), (x_ext + w_ext, y_ext + h_ext), (0, 255, 0), 3)
+
         # Display age and gender
         label = f"{gender}, {int(age)}"
-        cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0), 2)
+        cv2.putText(frame, label, (x_ext, y_ext - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 0, 0), 2)
 
     cv2.imshow('Webcam Age Gender Prediction', frame)
 
